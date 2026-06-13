@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Code-Generation Assistant</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #2f81f7;
+      --accent-hover: #4493f8;
+      --green: #3fb950;
+      --code-bg: #0b0f14;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 18px; margin: 0; }
+    header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .status {
+      display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+      font-size: 12px; color: var(--muted);
+    }
+    .pill {
+      padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .pill b { color: var(--text); font-weight: 600; }
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-right:6px; }
+    main {
+      max-width: 1100px; margin: 0 auto; padding: 24px 28px 60px;
+      display: grid; grid-template-columns: 1fr; gap: 20px;
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 20px;
+    }
+    .card h2 { margin: 0 0 14px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input[type=text], textarea, select {
+      background: var(--code-bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    }
+    textarea { width: 100%; resize: vertical; min-height: 64px; }
+    input[type=text] { flex: 1; min-width: 220px; }
+    button {
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    button.secondary:hover { background: #1f2630; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    label { font-size: 13px; color: var(--muted); }
+    .controls { display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+    .answer {
+      margin-top: 16px; background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; white-space: pre-wrap; font-size: 14px;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace; min-height: 40px;
+    }
+    .meta { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:12px; }
+    .ctx { margin-top: 16px; }
+    .ctx-item {
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      margin-bottom: 8px; background: var(--code-bg);
+    }
+    .ctx-head { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    .ctx-head .path { color: var(--accent); font-family: monospace; }
+    .ctx-body { font-family: monospace; font-size: 12px; white-space: pre-wrap; color: #c9d1d9; max-height: 140px; overflow:auto; }
+    .examples { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .chip {
+      font-size:12px; padding:5px 10px; border-radius:999px; border:1px solid var(--border);
+      background:transparent; color:var(--muted); cursor:pointer;
+    }
+    .chip:hover { color: var(--text); border-color: var(--accent); }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color: var(--accent); border-radius:50%; animation: spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>AI Code-Generation Assistant <span style="color:var(--muted);font-weight:400;">· RAG over codebases</span></h1>
+      <div class="sub">Semantic search → grounded answers &amp; code generation</div>
+    </div>
+    <div class="status" id="status">
+      <span class="pill"><span class="dot"></span>connecting…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1 · Index a codebase</h2>
+      <div class="row">
+        <input type="text" id="rootPath" placeholder="Absolute path to a repo, e.g. c:\Personal\projects\ai-code-assistant\backend" />
+        <button id="indexBtn" onclick="doIndex()">Index</button>
+      </div>
+      <div class="meta" id="indexMeta"></div>
+    </section>
+
+    <section class="card">
+      <h2>2 · Ask or generate</h2>
+      <textarea id="question" placeholder="Ask a question about the indexed code, or describe code to generate…"></textarea>
+      <div class="examples">
+        <span class="chip" onclick="setQ('How does semantic search retrieve code chunks?','qa')">How does semantic search work?</span>
+        <span class="chip" onclick="setQ('How does the OpenAI client generate answers?','qa')">How does generation work?</span>
+        <span class="chip" onclick="setQ('Write a function that returns how many chunks are indexed.','codegen')">Generate a function</span>
+      </div>
+      <div class="controls">
+        <label>Mode
+          <select id="mode">
+            <option value="qa">qa</option>
+            <option value="codegen">codegen</option>
+          </select>
+        </label>
+        <label>Top-K
+          <input type="text" id="topk" value="4" style="width:60px;" />
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="stream" checked /> stream
+        </label>
+        <button id="askBtn" onclick="doAsk()">Ask</button>
+      </div>
+      <div class="meta" id="answerMeta"></div>
+      <div class="answer" id="answer">—</div>
+      <div class="ctx" id="contexts"></div>
+    </section>
+  </main>
+
+  <script>
+    async function refreshHealth() {
+      try {
+        const r = await fetch('/health');
+        const h = await r.json();
+        document.getElementById('status').innerHTML = `
+          <span class="pill"><span class="dot"></span><b>online</b></span>
+          <span class="pill">vector: <b>${h.vector_backend}</b></span>
+          <span class="pill">embedder: <b>${h.embedder}</b></span>
+          <span class="pill">openai: <b>${h.openai_enabled}</b></span>
+          <span class="pill">gemini: <b>${h.gemini_enabled}</b></span>
+          <span class="pill">pgvector: <b>${h.pgvector_enabled}</b></span>
+          <span class="pill">chunks: <b>${h.indexed_chunks}</b></span>
+          <span class="pill">cache: <b>${h.cache.hits}h / ${h.cache.misses}m</b></span>`;
+      } catch (e) {
+        document.getElementById('status').innerHTML = '<span class="pill">offline</span>';
+      }
+    }
+
+    function setQ(q, mode) {
+      document.getElementById('question').value = q;
+      document.getElementById('mode').value = mode;
+    }
+
+    async function doIndex() {
+      const btn = document.getElementById('indexBtn');
+      const meta = document.getElementById('indexMeta');
+      const root = document.getElementById('rootPath').value.trim();
+      if (!root) { meta.textContent = 'Enter a path first.'; return; }
+      btn.disabled = true; meta.innerHTML = '<span class="spinner"></span> indexing…';
+      try {
+        const r = await fetch('/index', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ root })
+        });
+        if (!r.ok) throw new Error(await r.text());
+        const d = await r.json();
+        meta.innerHTML = `Indexed <b>${d.indexed_files}</b> files / <b>${d.indexed_chunks}</b> chunks · backend=${d.vector_backend} · embedder=${d.embedder}`;
+        refreshHealth();
+      } catch (e) {
+        meta.textContent = 'Error: ' + e.message;
+      } finally { btn.disabled = false; }
+    }
+
+    function renderContexts(contexts) {
+      const el = document.getElementById('contexts');
+      if (!contexts || !contexts.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<h2 style="margin:18px 0 10px;">Retrieved context</h2>' + contexts.map(c => `
+        <div class="ctx-item">
+          <div class="ctx-head">
+            <span class="path">${c.chunk.path}:${c.chunk.start_line}-${c.chunk.end_line} (${c.chunk.symbol || c.chunk.kind})</span>
+            <span>score ${c.score.toFixed(4)}</span>
+          </div>
+          <div class="ctx-body">${escapeHtml(c.chunk.content).slice(0, 600)}</div>
+        </div>`).join('');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function doAsk() {
+      const btn = document.getElementById('askBtn');
+      const ansEl = document.getElementById('answer');
+      const metaEl = document.getElementById('answerMeta');
+      const ctxEl = document.getElementById('contexts');
+      const question = document.getElementById('question').value.trim();
+      const mode = document.getElementById('mode').value;
+      const topk = parseInt(document.getElementById('topk').value) || null;
+      const stream = document.getElementById('stream').checked;
+      if (!question) { ansEl.textContent = 'Type a question first.'; return; }
+      btn.disabled = true; metaEl.innerHTML = ''; ctxEl.innerHTML = '';
+      ansEl.innerHTML = '<span class="spinner"></span>';
+
+      const body = JSON.stringify({ question, mode, top_k: topk });
+
+      if (stream) {
+        ansEl.textContent = '';
+        try {
+          const r = await fetch('/ask/stream', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body
+          });
+          const reader = r.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop();
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const payload = line.slice(6);
+              if (payload === '[DONE]') continue;
+              try { ansEl.textContent += JSON.parse(payload).token; } catch {}
+            }
+          }
+          metaEl.innerHTML = 'streamed · mode=' + mode;
+        } catch (e) {
+          ansEl.textContent = 'Error: ' + e.message;
+        } finally { btn.disabled = false; refreshHealth(); }
+      } else {
+        try {
+          const r = await fetch('/ask', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body
+          });
+          if (!r.ok) throw new Error(await r.text());
+          const d = await r.json();
+          ansEl.textContent = d.answer;
+          metaEl.innerHTML = `provider=<b>${d.provider}</b> · model=<b>${d.model_used}</b> · cached=<b>${d.cached}</b>`;
+          renderContexts(d.contexts);
+          refreshHealth();
+        } catch (e) {
+          ansEl.textContent = 'Error: ' + e.message;
+        } finally { btn.disabled = false; }
+      }
+    }
+
+    // Prefill with this project's backend path and auto-index on load.
+    window.addEventListener('DOMContentLoaded', async () => {
+      await refreshHealth();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ai-code-assistant
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Paste your real key in the Render dashboard (do NOT commit it).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_CHAT_MODEL
+        value: gemini-2.5-flash
+      # Auto-index the bundled backend code on startup so the demo has content.
+      - key: AUTO_INDEX_PATH
+        value: backend
+      # Security: restrict /index to paths inside the deployed project only.
+      - key: INDEX_BASE_DIR
+        value: .
+      - key: PYTHON_VERSION
+        value: 3.12.7

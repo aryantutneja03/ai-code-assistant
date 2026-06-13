@@ -1,0 +1,34 @@
+{
+  "questions": [
+    {
+      "question": "How does the OpenAI client generate answers and fall back offline?",
+      "mode": "qa",
+      "expected_files": ["backend/llm_client.py"],
+      "expected_keywords": ["openai", "local", "stub", "stream", "generate"]
+    },
+    {
+      "question": "How does semantic search retrieve code chunks?",
+      "mode": "qa",
+      "expected_files": ["backend/semantic_search.py"],
+      "expected_keywords": ["embed", "cosine", "top_k", "search", "score"]
+    },
+    {
+      "question": "How does the semantic cache avoid repeated LLM calls?",
+      "mode": "qa",
+      "expected_files": ["backend/cache.py"],
+      "expected_keywords": ["cosine", "threshold", "lookup", "embedding"]
+    },
+    {
+      "question": "How are Python files chunked for indexing?",
+      "mode": "qa",
+      "expected_files": ["backend/chunking.py"],
+      "expected_keywords": ["ast", "function", "class", "window"]
+    },
+    {
+      "question": "Write a helper that returns the top-1 retrieved chunk content for a question.",
+      "mode": "codegen",
+      "expected_files": ["backend/rag.py", "backend/semantic_search.py"],
+      "expected_keywords": ["retrieve", "chunk", "content"]
+    }
+  ]
+}
